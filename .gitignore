@@ -2,7 +2,8 @@
 !.env.example
 /app/*
 !/app/.gitkeep
-/data/*
+/data/mysql/*
+/data/sessions/*
 !/data/.gitkeep
 !/data/mysql/.gitkeep
 !/data/sessions/.gitkeep
