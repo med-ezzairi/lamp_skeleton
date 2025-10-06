@@ -1,0 +1,79 @@
+version: '3'
+services:
+    app:
+        build:
+            context: ./docker
+            dockerfile: php.Dockerfile
+        container_name: ${APP_NAME:?err}-app
+        restart: unless-stopped
+        working_dir: /var/www/html
+        volumes:
+            - './app:/var/www/html'
+            - './docker/config/app/php-fpm.d/zzz-custom.conf:/usr/local/etc/php-fpm.d/zzz-custom.conf'
+        networks:
+            - ${APP_NAME:?err}-network
+        #ports:
+        #    - "3306:3306"
+        
+    httpd:
+        image: httpd:2.4
+        container_name: ${APP_NAME:?err}-httpd
+        restart: unless-stopped
+        ports:
+            - ${APP_HTTP_PORT:-88}:80
+            - ${APP_HTTPS_PORT:-4438}:443
+        links:
+            - 'app'
+        working_dir: /usr/local/apache2
+        volumes:
+            - './app:/var/www/html'
+            - './docker/config/httpd/httpd.conf:/usr/local/apache2/conf/httpd.conf'
+            - './docker/config/httpd/conf.d:/usr/local/apache2/conf.d'
+        networks:
+            - ${APP_NAME:?err}-network
+    
+    database:
+        build:
+            context: ./docker
+            dockerfile: mysql8.Dockerfile
+        container_name: ${APP_NAME:?err}-db
+        restart: 'always'
+        ports:
+            - "127.0.0.1:${MYSQL_HOST_MACHINE_PORT}:3306"
+        volumes: 
+            - ${MYSQL_DATA_DIR-./data/mysql}:/var/lib/mysql
+            - ${MYSQL_LOG_DIR-./logs/mysql}:/var/log/mysql
+        networks:
+            - ${APP_NAME:?err}-network
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: ${MYSQL_DB_NAME}
+            MYSQL_USER: ${MYSQL_DB_USER}
+            MYSQL_PASSWORD: ${MYSQL_DB_PASS}
+        
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: '${APP_NAME:?err}-phpmyadmin'
+        ports:
+            - '${PMA_HOST_MACHINE_PORT:?err}:80'
+        links:
+            - database
+        volumes: 
+            - './data/sessions:/sessions'
+            - ${PMA_PHP_INI-./config/pma/php.ini}:/usr/local/etc/php/conf.d/php-phpmyadmin.ini
+        networks:
+            - ${APP_NAME:?err}-network
+        environment:
+            PMA_HOST: database
+            PMA_PORT: 3306
+            PMA_USER: root
+            PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_USER: ${MYSQL_DB_USER}
+            MYSQL_PASSWORD: ${MYSQL_DB_PASS}
+            UPLOAD_LIMIT: ${PMA_UPLOAD_LIMIT}
+            MEMORY_LIMIT: ${PMA_MEMORY_LIMIT}
+      
+networks:
+    appgia-network:
+        driver: bridge

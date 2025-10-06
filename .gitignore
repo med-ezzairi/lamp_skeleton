@@ -1,0 +1,8 @@
+.env*
+!.env.example
+/app/*
+!/app/.gitkeep
+/data/*
+!/data/.gitkeep
+!/data/mysql/.gitkeep
+!/data/sessions/.gitkeep
