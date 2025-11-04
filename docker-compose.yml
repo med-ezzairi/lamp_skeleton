@@ -11,7 +11,7 @@ services:
             - './app:/var/www/html'
             - './docker/config/app/php-fpm.d/zzz-custom.conf:/usr/local/etc/php-fpm.d/zzz-custom.conf'
         networks:
-            - ${APP_NAME:?err}-network
+            - app_network
         #ports:
         #    - "3306:3306"
         
@@ -30,21 +30,21 @@ services:
             - './docker/config/httpd/httpd.conf:/usr/local/apache2/conf/httpd.conf'
             - './docker/config/httpd/conf.d:/usr/local/apache2/conf.d'
         networks:
-            - ${APP_NAME:?err}-network
+            - app_network
     
     database:
         build:
             context: ./docker
             dockerfile: mysql8.Dockerfile
         container_name: ${APP_NAME:?err}-db
-        restart: 'always'
+        restart: unless-stopped
         ports:
             - "127.0.0.1:${MYSQL_HOST_MACHINE_PORT}:3306"
         volumes: 
             - ${MYSQL_DATA_DIR-./data/mysql}:/var/lib/mysql
             - ${MYSQL_LOG_DIR-./logs/mysql}:/var/log/mysql
         networks:
-            - ${APP_NAME:?err}-network
+            - app_network
         environment:
             MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
             MYSQL_DATABASE: ${MYSQL_DB_NAME}
@@ -60,9 +60,9 @@ services:
             - database
         volumes: 
             - './data/sessions:/sessions'
-            - ${PMA_PHP_INI-./config/pma/php.ini}:/usr/local/etc/php/conf.d/php-phpmyadmin.ini
+            - ${PMA_PHP_INI-./docker/config/pma/php.ini}:/usr/local/etc/php/conf.d/php-phpmyadmin.ini
         networks:
-            - ${APP_NAME:?err}-network
+            - app_network
         environment:
             PMA_HOST: database
             PMA_PORT: 3306
@@ -75,5 +75,6 @@ services:
             MEMORY_LIMIT: ${PMA_MEMORY_LIMIT}
       
 networks:
-    appgia-network:
+    app_network:
         driver: bridge
+        name: ${APP_NAME}-network
